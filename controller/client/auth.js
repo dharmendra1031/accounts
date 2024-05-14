@@ -1,10 +1,27 @@
 const User = require("../../model/user");
 const Transaction = require("../../model/transaction");
 
+
+async function profile(req, res) {
+    var req_body = req.body;
+    var user_id = req_body.user_id;
+    User.findOne({_id: user_id}
+    ).then(data => {
+        if(data == null){
+            res.status(404).json({message: "User not found"});
+        }else{
+            res.status(200).json(data);
+        }
+    }).catch(err => {
+        res.status(500).json({error: err});
+    });
+}
+
 async function withdrawals(req, res) {
     var req_body = req.body;
     var user_id = req_body.user_id;
     var amount = req_body.amount;
+    var account_id = req_body.account_id;
     var user = await User.findOne({ _id: user_id });
     if (user == null) {
         res.status(404).json({ message: "User not found" });
@@ -20,6 +37,7 @@ async function withdrawals(req, res) {
                         amount: amount,
                         description: "Withdrawal",
                         type: "WITHDRAWAL",
+                        account_id: account_id,
                         user_id: user_id,
                         date: new Date(),
                         status: "PENDING",
@@ -29,12 +47,16 @@ async function withdrawals(req, res) {
 
                         payment_currency: "INR",
                     });
-                    transaction.save().then(data1 => {
-                        res.status(200).json({ message: "Withdrawal successful" });
-                    }).catch((err)=>{
-                        res.status(500).json({ error: err });
-                    });
-
+                    transaction
+                        .save()
+                        .then((data1) => {
+                            res.status(200).json({
+                                message: "Withdrawal successful",
+                            });
+                        })
+                        .catch((err) => {
+                            res.status(500).json({ error: err });
+                        });
                 })
                 .catch((err) => {
                     res.status(500).json({ error: err });
@@ -112,8 +134,54 @@ async function addBonus(req, res) {
     }
 }
 
-module.exports = {
+async function get_transactions(req, res) {
+    var pageNo = req.query.pageNo || 1;
+    var user_id = req.query.userId;
+    var size = process.env.DEFAULT_PAGE_SIZE;
+    var query = {};
+
+
+
+    if(req.query.userId){
+        query.user_id = req.query.userId;
+    }
+    if (req.query.status) {
+        query.status = req.query.status;
+    }
+
+    if (req.query.type) {
+        query.type = req.query.type;
+    }
+    console.log(query);
+    var isNextPage = false;
+    var count = await Transaction.countDocuments({ user_id: '66427c4ce68fb8313ae7706e', status: 'SUCCESS' });
+    if(count  > pageNo * size){
+        isNextPage = true
+    }else{
+        isNextPage = false
+    }
+    console.log(query);
+    Transaction.find({ user_id: '66427c4ce68fb8313ae7706e', status: 'SUCCESS' })
+        .skip(size * (pageNo - 1))
+        .limit(size)
+        .then((data) => {
+            console.log(data)
+            res.status(200).json({
+                metadata: { pageNo: pageNo, pageSize: size , count: count , isNextPage: isNextPage},
+                data: data,
+            });
+        })
+
+        .catch((error) => {
+            res.status(500).json({
+                error: error,
+            });
+        });
+}
+
+module.exports = {profile,
     withdrawals,
     deposit,
     addBonus,
+    get_transactions,
 };

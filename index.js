@@ -38,19 +38,21 @@ function authenticate(req,res,next)
     var header = req.headers;
 
     jwt.verify(header.token, public_key, function(error,data){
+        console.log("Yha aa rha error")
         if(error)
             res.status(401).json({message:"Unauthorized"})
         else
         {
           user.findOne({_id: data.user_id})
             .then((data1)=>{
+                console.log("Yha aa rha error")
                 if(data1 == null)
                 {
                   res.status(401).json({message:"Unauthorized"});
                 }
                 else
                 {
-                  req.middleware = {user_id: data.user_id, country: data.country};
+                  req.middleware = {user_id: data.user_id};
                   next();
                 }
             })

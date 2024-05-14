@@ -57,6 +57,7 @@ function login(req, res) {
                     .then((token) => {
                         res.status(200).json({
                             token: token,
+                            user_id: data._id,
                         });
                     })
                     .catch((err) => {

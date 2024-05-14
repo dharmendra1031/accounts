@@ -8,15 +8,11 @@ async function disable_user(req, res) {
     var user_id = req_body.user_id;
     User.findOneAndUpdate({ _id: user_id }, { $set: { status: "DISABLED" } })
         .then((data) => {
-
-            if(data == null)
-        {
-            res.status(404).json({message:"User not found"});
-        }
-        else
-        {
-            res.status(200).json({message:"User disabled"});
-        }
+            if (data == null) {
+                res.status(404).json({ message: "User not found" });
+            } else {
+                res.status(200).json({ message: "User disabled" });
+            }
         })
         .catch((error) => {
             res.status(500).json({
@@ -30,13 +26,10 @@ async function enable_user(req, res) {
     var user_id = req_body.user_id;
     User.findOneAndUpdate({ _id: user_id }, { $set: { status: "ENABLED" } })
         .then((data) => {
-            if(data == null)
-            {
-                res.status(404).json({message:"User not found"});
-            }
-            else
-            {
-                res.status(200).json({message:"User enabled"});
+            if (data == null) {
+                res.status(404).json({ message: "User not found" });
+            } else {
+                res.status(200).json({ message: "User enabled" });
             }
         })
         .catch((error) => {
@@ -61,7 +54,7 @@ async function delete_user(req, res) {
 }
 
 async function get_user_list(req, res) {
-    var pageNo = req.params.pageNo || 1;
+    var pageNo = req.query.pageNo || 1;
     var size = process.env.DEFAULT_PAGE_SIZE;
     var query = {};
     if (req.query.name) {
@@ -106,10 +99,10 @@ async function get_user(req, res) {
 }
 
 async function get_transactions(req, res) {
-    var pageNo = req.params.pageNo || 1;
+    var pageNo = req.query.pageNo || 1;
     var size = process.env.DEFAULT_PAGE_SIZE;
     var query = {};
-
+    console.log(req.query.pageNo );
     if (req.query.status) {
         query.status = req.query.status;
     }
@@ -117,12 +110,19 @@ async function get_transactions(req, res) {
     if (req.query.type) {
         query.type = req.query.type;
     }
+    var isNextPage = false;
+    var count = await Transaction.countDocuments(query);
+    if(count  > pageNo * size){
+        isNextPage = true
+    }else{
+        isNextPage = false
+    }
     Transaction.find(query)
         .skip(size * (pageNo - 1))
         .limit(size)
         .then((data) => {
             res.status(200).json({
-                metadata: { pageNo: pageNo, pageSize: size },
+                metadata: { pageNo: pageNo, pageSize: size, count: count, isNextPage: isNextPage},
                 data: data,
             });
         })
@@ -134,16 +134,19 @@ async function get_transactions(req, res) {
         });
 }
 
-async function accept_transaction(req,res){
+async function accept_transaction(req, res) {
     var req_body = req.body;
     var transaction_id = req_body.transaction_id;
-    Transaction.findOneAndUpdate({ _id: transaction_id }, { $set: { status: "SUCCESS" } })
+    Transaction.findOneAndUpdate(
+        { _id: transaction_id },
+        { $set: { status: "SUCCESS" } }
+    )
         .then((data) => {
-           if(data ==null){
-            res.status(200).json({message:"Transaction not found"});
-           }else{
-            res.status(200).json({message:"Transaction accepted"});
-           }
+            if (data == null) {
+                res.status(200).json({ message: "Transaction not found" });
+            } else {
+                res.status(200).json({ message: "Transaction accepted" });
+            }
         })
         .catch((error) => {
             res.status(500).json({
@@ -154,29 +157,35 @@ async function accept_transaction(req,res){
 async function reject_transaction(req, res) {
     var req_body = req.body;
     var transaction_id = req_body.transaction_id;
-    Transaction.findOneAndUpdate({_id: transaction_id},{ $set: {status: "REJECTED"}})
-    .then((data) => {
-        if(data == null)
-        {
-            res.status(404).json({message:"Transaction not found"});
-        }
-        else
-        {
-
-           User.findOne({_id: data.user_id}).then((user)=>{
-            user.walletBalance = user.walletBalance + data.amount;
-            user.save().then((data1) => {
-                res.status(200).json({message:"Transaction rejected"})
-            }).catch((error) => {
-                res.status(500).json({error:error});
-            });
-           }).catch((error) => {
-            res.status(500).json({error:error});
-           });
-        }
-    }).catch((error) => {
-        res.status(500).json({error:error});
-    });
+    Transaction.findOneAndUpdate(
+        { _id: transaction_id },
+        { $set: { status: "REJECTED" } }
+    )
+        .then((data) => {
+            if (data == null) {
+                res.status(404).json({ message: "Transaction not found" });
+            } else {
+                User.findOne({ _id: data.user_id })
+                    .then((user) => {
+                        user.walletBalance = user.walletBalance + data.amount;
+                        user.save()
+                            .then((data1) => {
+                                res.status(200).json({
+                                    message: "Transaction rejected",
+                                });
+                            })
+                            .catch((error) => {
+                                res.status(500).json({ error: error });
+                            });
+                    })
+                    .catch((error) => {
+                        res.status(500).json({ error: error });
+                    });
+            }
+        })
+        .catch((error) => {
+            res.status(500).json({ error: error });
+        });
 }
 
 module.exports = {
@@ -185,5 +194,7 @@ module.exports = {
     delete_user,
     get_user_list,
     get_user,
-    get_transactions,accept_transaction,reject_transaction
+    get_transactions,
+    accept_transaction,
+    reject_transaction,
 };
