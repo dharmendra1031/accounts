@@ -11,7 +11,7 @@ const transactionSchema = new mongoose.Schema({
     },
     account_id: {
         type: String,
-        required: true,
+        // required: true,
     },
     type: {
         type: String,

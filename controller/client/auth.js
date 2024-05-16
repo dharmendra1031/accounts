@@ -1,6 +1,6 @@
 const User = require("../../model/user");
 const Transaction = require("../../model/transaction");
-
+require("dotenv/config");
 
 async function profile(req, res) {
     var req_body = req.body;
@@ -134,17 +134,16 @@ async function addBonus(req, res) {
     }
 }
 
-async function get_transactions(req, res) {
+async function get_user_transactions(req, res) {
     var pageNo = req.query.pageNo || 1;
-    var user_id = req.query.userId;
     var size = process.env.DEFAULT_PAGE_SIZE;
     var query = {};
 
-
-
-    if(req.query.userId){
-        query.user_id = req.query.userId;
+    if (req.query.user_id) {
+        query.user_id = req.query.user_id;
     }
+
+
     if (req.query.status) {
         query.status = req.query.status;
     }
@@ -154,20 +153,18 @@ async function get_transactions(req, res) {
     }
     console.log(query);
     var isNextPage = false;
-    var count = await Transaction.countDocuments({ user_id: '66427c4ce68fb8313ae7706e', status: 'SUCCESS' });
+    var count = await Transaction.countDocuments({user_id: req.query.user_id});
     if(count  > pageNo * size){
         isNextPage = true
     }else{
         isNextPage = false
     }
-    console.log(query);
-    Transaction.find({ user_id: '66427c4ce68fb8313ae7706e', status: 'SUCCESS' })
+    Transaction.find(query)
         .skip(size * (pageNo - 1))
         .limit(size)
         .then((data) => {
-            console.log(data)
             res.status(200).json({
-                metadata: { pageNo: pageNo, pageSize: size , count: count , isNextPage: isNextPage},
+                metadata: { pageNo: pageNo, pageSize: size, count: count, isNextPage: isNextPage},
                 data: data,
             });
         })
@@ -183,5 +180,5 @@ module.exports = {profile,
     withdrawals,
     deposit,
     addBonus,
-    get_transactions,
+    get_user_transactions,
 };
