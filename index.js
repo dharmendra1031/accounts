@@ -96,7 +96,7 @@ function authenticate_portal(req,res,next)
         }
     })
 }
-
+//  ok
 
 API.use('/app/no-auth', route_no_auth);
 API.use("/app/auth", authenticate, route_auth);
