@@ -163,17 +163,17 @@ async function get_user_transactions(req, res) {
   } else {
     isNextPage = false;
   }
-  Transaction.find(query)
+  Transaction.find(query).sort({date: -1})
     .skip(size * (pageNo - 1))
     .limit(size)
     .then((data) => {
       res.status(200).json({
-        metadata: {
+        metadata: JSON.stringify({
           pageNo: pageNo,
           pageSize: size,
           count: count,
           isNextPage: isNextPage,
-        },
+        }),
         data: data,
       });
     })
@@ -186,22 +186,40 @@ async function get_user_transactions(req, res) {
 }
 
 async function get_user_trade(req, res) {
+  var pageNo = req.query.pageNo || 1;
+  var size = process.env.DEFAULT_PAGE_SIZE;
   var query = {};
 
   if (req.query.user_id) {
     query.user_id = req.query.user_id;
   }
-  UserTrades.find(query)
+
+  if (req.query.status) {
+    query.status = req.query.status;
+  }
+
+  if (req.query.type) {
+    query.type = req.query.type;
+  }
+  console.log(query);
+  var isNextPage = false;
+  var count = await UserTrades.countDocuments({ user_id: req.query.user_id });
+  if (count > pageNo * size) {
+    isNextPage = true;
+  } else {
+    isNextPage = false;
+  }
+  UserTrades.find(query).sort({date: -1})
     .skip(size * (pageNo - 1))
     .limit(size)
     .then((data) => {
       res.status(200).json({
-        metadata: {
+        metadata: JSON.stringify({
           pageNo: pageNo,
           pageSize: size,
           count: count,
           isNextPage: isNextPage,
-        },
+        }),
         data: data,
       });
     })
@@ -249,11 +267,11 @@ async function place_trade(req, res) {
           res.status(200).json({ message: "Trade placed successfully" });
         })
         .catch((err) => {
-          res.status(500).json({ error: err });
+          res.status(500).json({ message: err });
         });
     })
     .catch((err) => {
-      res.status(500).json({ error: err });
+      res.status(500).json({ message: err });
     });
 }
 
