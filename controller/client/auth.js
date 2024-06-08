@@ -163,7 +163,8 @@ async function get_user_transactions(req, res) {
   } else {
     isNextPage = false;
   }
-  Transaction.find(query).sort({date: -1})
+  Transaction.find(query)
+    .sort({ date: -1 })
     .skip(size * (pageNo - 1))
     .limit(size)
     .then((data) => {
@@ -203,32 +204,46 @@ async function get_user_trade(req, res) {
   }
   console.log(query);
   var isNextPage = false;
-  var count = await UserTrades.countDocuments({ user_id: req.query.user_id });
-  if (count > pageNo * size) {
-    isNextPage = true;
-  } else {
-    isNextPage = false;
-  }
-  UserTrades.find(query).sort({date: -1})
-    .skip(size * (pageNo - 1))
-    .limit(size)
-    .then((data) => {
-      res.status(200).json({
-        metadata: JSON.stringify({
-          pageNo: pageNo,
-          pageSize: size,
-          count: count,
-          isNextPage: isNextPage,
-        }),
-        data: data,
-      });
-    })
+  try {
+    UserTrades.countDocuments({ user_id: req.query.user_id })
+      .then((count) => {
+        if (count > pageNo * size) {
+          isNextPage = true;
+        } else {
+          isNextPage = false;
+        }
+        UserTrades.find(query)
+          .sort({ date: -1 })
+          .skip(size * (pageNo - 1))
+          .limit(size)
+          .then((data) => {
+            res.status(200).json({
+              metadata: JSON.stringify({
+                pageNo: pageNo,
+                pageSize: size,
+                count: count,
+                isNextPage: isNextPage,
+              }),
+              data: data,
+            });
+          })
 
-    .catch((error) => {
-      res.status(500).json({
-        error: error,
+          .catch((error) => {
+            res.status(500).json({
+              error: error,
+            });
+          });
+      })
+      .catch((error) => {
+        res.status(500).json({
+          error: error,
+        });
       });
+  } catch (error) {
+    res.status(500).json({
+      error: error,
     });
+  }
 }
 
 async function place_trade(req, res) {
